@@ -49,6 +49,12 @@ const newUserMalformed3 = {
   password: '123456'
 }
 
+const newUserMalformed4 = {
+  username: 'Risto Peltonen',
+  name: 'Testaaja',
+  password: '123456'
+}
+
 const newBlogWithoutTitle = {
   author: 'Edsger W. Dijkstra',
   url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
@@ -99,5 +105,6 @@ module.exports = {
   newUserMalformed,
   newUserMalformed1,
   newUserMalformed2,
-  newUserMalformed3
+  newUserMalformed3,
+  newUserMalformed4
 }

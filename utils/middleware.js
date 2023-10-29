@@ -16,6 +16,12 @@ const unknownEndpoint = (request, response) => {
 
 const errorHandler = (error, request, response, next) => {
   logger.error(error)
+  if (error.message.includes('Error, expected `username` to be unique')) {
+    return response.status(409).json({ error: 'username must be unique' })
+  }
+  if (error.message.includes('is shorter than the minimum allowed length (3).')) {
+    return response.status(400).json({ error: 'username must be at least 3 characters long' })
+  }
   if (error.message === 'invalid token') {
     return response.status(401).json({ error: error.message })
   }
@@ -54,11 +60,12 @@ const userExtractor = async (request, response, next) => {
   }
   try {
     const decodedToken = jwt.verify(token, process.env.SECRET)
-    if (!token || !decodedToken.id) {
+    if (!decodedToken.id) {
       const error = new Error('invalid token')
       next(error)
     }
     const user = await User.findById(decodedToken.id)
+    console.log(user.toJSON())
     if (!user) {
       const error = new Error('invalid token')
       error.status = 401

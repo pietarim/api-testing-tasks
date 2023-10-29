@@ -2,12 +2,10 @@ const blogRouter = require('express').Router()
 const Blog = require('../models/blog')
 const User = require('../models/user')
 
-blogRouter.get('/', (request, response) => {
-  Blog
-    .find({}).populate('user', { username: 1, name: 1 })
-    .then(blogs => {
-      response.json(blogs)
-    })
+// eslint-disable-next-line no-unused-vars
+blogRouter.get('/', async (request, response, next) => {
+  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
+  response.json(blogs)
 })
 
 blogRouter.post('/', async (request, response, next) => {
@@ -30,6 +28,11 @@ blogRouter.post('/', async (request, response, next) => {
 blogRouter.delete('/:id', async (request, response, next) => {
   const user = request.user
   const blog = await Blog.findById(request.params.id)
+  if (!blog) {
+    const error = new Error('Blog not found')
+    error.status = 404
+    next(error)
+  }
   if ( user.id !== blog.user.toString()) {
     const error = new Error('Unauthorized')
     error.status = 401
@@ -50,21 +53,13 @@ blogRouter.delete('/:id', async (request, response, next) => {
 })
 
 // eslint-disable-next-line no-unused-vars
-blogRouter.put('/:id', async  (request, response, next) => {
+blogRouter.put('/:id', async (request, response, next) => {
   const body = request.body
-  /* const body = request.body
-  const user = request.user
-  if (!user || !user.id) {
-    return response.status(401).json({ error: 'token invalid' })
-  } */
   const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, body, { new: true })
   if (!updatedBlog) {
     const error = new Error('Blog not found')
     error.status = 404
     next(error)
-    /* throw new Error({ status: 404 }) */
-    /* const error = new Error({ status: 404 })
-    next(error) */
   }
   return response.json(updatedBlog)
 })

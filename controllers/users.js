@@ -11,9 +11,16 @@ userRouter.get('/', async (req, res) => {
 // eslint-disable-next-line no-unused-vars
 userRouter.post('/', async (req, res, next) => {
   const { password, name, username } = req.body
-  if (!password || password.length < 3) {
+  if (!password) {
+    throw new Error('password is required')
+  }
+  if (password.length < 3) {
     throw new Error('password must be at least 3 characters long')
   }
+  if (!username) {
+    throw new Error('username is required')
+  }
+
   const passwordHash = bcrypt.hashSync(password, 10)
   const user = new User({
     username,

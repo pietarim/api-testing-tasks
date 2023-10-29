@@ -15,12 +15,12 @@ const getToken = async () => {
 
 beforeEach(async () => {
   await User.deleteMany({})
-  await api
+  const user = await api
     .post('/api/users')
     .send(helper.initialUsers[0])
   await Blog.deleteMany({})
 
-  let blogObject = new Blog(helper.initialBlogs[0])
+  let blogObject = new Blog({ ...helper.initialBlogs[0], user: user.body.id })
   await blogObject.save()
 
   blogObject = new Blog(helper.initialBlogs[1])
@@ -31,11 +31,14 @@ test('blogs are returned as json', async () => {
   await api
     .get('/api/blogs')
     .expect(200)
+    .set({ 'Authorization': await getToken() })
     .expect('Content-Type', /application\/json/)
 })
 
 test('blogs are defined by id', async () => {
-  const response = await api.get('/api/blogs')
+  const response = await api
+    .get('/api/blogs')
+    .set({ 'Authorization': await getToken() })
   expect(response.body[0].id).toBeDefined()
 })
 
@@ -50,7 +53,7 @@ test('a blog gets added to the database', async () => {
 
 })
 
-test('a blog without likes gets 0 likes', async () => {
+test('a blog without likes defaults to 0 likes', async () => {
   const newBlog =  await api
     .post('/api/blogs')
     .send(helper.newBlogWithoutLikes)
@@ -76,28 +79,62 @@ test('Cant create malformed user', async () => {
     .post('/api/users')
     .send(helper.newUserMalformed)
   expect(newUser0.status).toBe(400)
+  expect(newUser0.body.error).toBe('password must be at least 3 characters long')
 
   const newUser1 = await api
     .post('/api/users')
     .send(helper.newUserMalformed1)
   expect(newUser1.status).toBe(400)
+  expect(newUser1.body.error).toBe('username must be at least 3 characters long')
 
   const newUser2 = await api
     .post('/api/users')
     .send(helper.newUserMalformed2)
   expect(newUser2.status).toBe(400)
+  expect(newUser2.body.error).toBe('password is required')
 
   const newUser3 = await api
     .post('/api/users')
     .send(helper.newUserMalformed3)
   expect(newUser3.status).toBe(400)
+  expect(newUser3.body.error).toBe('username is required')
+
+  const newUser4 = await api
+    .post('/api/users')
+    .send(helper.newUserMalformed4)
+  expect(newUser4.status).toBe(409)
+  expect(newUser4.body.error).toBe('username must be unique')
 })
 
 test('Cant blog without token', async () => {
   const newBlog = await api
     .post('/api/blogs')
     .send(helper.newBlog)
-  expect(newBlog.status).toBe(400)
+  expect(newBlog.status).toBe(401)
+})
+
+test('Blog can be deleted', async () => {
+  const blogs = await helper.blogsInDb()
+  const blogToDelete = blogs[0]
+  const token = await getToken()
+  await api
+    .delete(`/api/blogs/${blogToDelete.id}`)
+    .set({ 'Authorization': token })
+    .expect(204)
+  const blogsAfterDelete = await helper.blogsInDb()
+  expect(blogsAfterDelete.length).toBe(helper.initialBlogs.length - 1)
+})
+
+test('Blog can be updated', async () => {
+  const blogs = await helper.blogsInDb()
+  const blog = blogs[0]
+  const likedBolog = { ...blog, likes: blog.likes + 1 }
+  const updatedBlog = await api
+    .put(`/api/blogs/${blog.id}`)
+    .set({ 'Authorization': await getToken() })
+    .send(likedBolog)
+    .expect(200)
+  expect(updatedBlog.body.likes).toBe(blog.likes + 1)
 })
 
 afterAll(async () => {
